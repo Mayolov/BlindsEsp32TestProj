@@ -10,7 +10,7 @@ const char* ssid = "7LeavesCafe";
 const char* password = "berry129";
 
 // Set timezone PST and the server we're using 
-#define NTP_OFFSET 3*60*60+60*60
+#define NTP_OFFSET 16*60*60
 #define NTP_ADDRESS "us.pool.ntp.org"
 
 // intizializing this stuff
@@ -32,17 +32,17 @@ int mSpeed = 255;
    to the new variable and changes the time of which the alarm is set at and remakes the alarm.
 */
 //*************************************
-int alarmOpenHours = 1;
+int alarmOpenHours = 2;
 int alarmOpenHoursCheck = alarmOpenHours;
 
-int alarmOpenMins = 1;
+int alarmOpenMins = 44;
 int alarmOpenMinsCheck =  alarmOpenMins;
 
-int alarmCloseHours = 1;
+int alarmCloseHours = 2;
 int alarmCloseHoursCheck = alarmCloseHours;
 
 
-int alarmCloseMins = 1;
+int alarmCloseMins = 45;
 int alarmCloseMinsCheck = alarmCloseMins;
 //***************************************
 
@@ -57,6 +57,7 @@ int interval_two = 3000;
 // Should be the closing way, but itll change if its not right when I test it 
 void motorClockWise(void)
 {
+  timeClient.update();
 
   time_since_last_reset = millis();
   Serial.println("\nALARM 1 TRIGGERED!\n");
@@ -131,7 +132,6 @@ Serial.println(WiFi.localIP());
 
 // Serial prints time when setup is happening
 timeClient.update();
-String newTime =  timeClient.getFormattedTime();
 String newtime = timeClient.getFormattedTime(); 
 Serial.print("the time is : "); 
 Serial.println(newtime); 
@@ -143,6 +143,7 @@ Serial.print("Seconds : ");
 Serial.println((newtime.substring(6,8)).toInt()); 
 Serial.println(timeClient.getFormattedTime());
 setTime((newtime.substring(0,2)).toInt(),(newtime.substring(3,5)).toInt(),(newtime.substring(6,8)).toInt(),1,1,20);
+
 // alarm one goes clockwise
 // could be made into a function instead
   /*While alarm1Set != 'ok' or 'skip'{
@@ -163,12 +164,27 @@ setTime((newtime.substring(0,2)).toInt(),(newtime.substring(3,5)).toInt(),(newti
 
 void loop()
 {
-  // If the updated times on the non-Check vars are changed then go and changed their alarm 
-  if(alarmOpenHoursCheck!= alarmOpenHours && alarmOpenMinsCheck != alarmOpenMins){
+  timeClient.update();
+  Serial.print("Waiting for alarms\n ");
+  // If the updated times on the non-Check vars are changed then go and changed their alarm
+  if(hour() == alarmOpenHoursCheck && minute() == alarmOpenMinsCheck && isOpen == true){
+    motorClockWise();
+    //set isOpen to false/ true depending on how this operates
+    isOpen = false;
+  }
+    if(hour() == alarmCloseHoursCheck && minute() == alarmCloseMinsCheck && isOpen == false){
+    motorCounterClockWise();
+    //set isOpen to false/ true depending on how this operates
+    isOpen = true;
+  }
 
+  if(alarmOpenHoursCheck!= alarmOpenHours && alarmOpenMinsCheck != alarmOpenMins){
+    alarmOpenMinsCheck = alarmOpenMins;
+    alarmOpenHoursCheck = alarmOpenHours;
   } 
   if(alarmCloseHoursCheck!= alarmCloseHours && alarmCloseMinsCheck != alarmCloseMins){
-    
+    alarmCloseMinsCheck = alarmCloseMins;
+    alarmCloseHoursCheck = alarmCloseHours;
   }
 
 
@@ -191,19 +207,17 @@ void loop()
     isOPen == true
   }
   */
-  Serial.print("Waiting for alarms\n ");
-  analogWrite(speedPin, mSpeed);
 
   // do this command if the time alarm time is equal to this and if the blinds are closed
   //if (ClockObj.isAlarm1() && isOpen == false){
-  motorClockWise();
+  //motorClockWise();
 
   //isOpen = true;
   //}
 
   // do this command if the time alarm time is equal to this and if the blinds are open
   //if (ClockObj.isAlarm2() && isOpen == true){
-  motorCounterClockWise();
+  //motorCounterClockWise();
   //isOpen = false;
   //}
 
