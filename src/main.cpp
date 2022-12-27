@@ -7,7 +7,7 @@
 
 // wifi credentials
 const char* ssid = "7LeavesCafe";
-const char* password = "berry129";
+const char* password = "**********";
 
 // soft webserver thing
 const char* ssidServer = "HASH-SLINGING-SLASHER";
