@@ -3,5 +3,6 @@
     "cSpell.words": [
         "unneccsary",
         "unnessecary"
-    ]
+    ],
+    "cmake.configureOnOpen": false
 }

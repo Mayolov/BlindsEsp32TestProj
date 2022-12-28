@@ -39,17 +39,17 @@ int mSpeed = 255;
    to the new variable and changes the time of which the alarm is set at and remakes the alarm.
 */
 //*************************************
-int alarmOpenHours = 2;
+int alarmOpenHours = 7;
 int alarmOpenHoursCheck = alarmOpenHours;
 
-int alarmOpenMins = 44;
+int alarmOpenMins = 0;
 int alarmOpenMinsCheck =  alarmOpenMins;
 
-int alarmCloseHours = 2;
+int alarmCloseHours = 20;
 int alarmCloseHoursCheck = alarmCloseHours;
 
 
-int alarmCloseMins = 45;
+int alarmCloseMins = 25;
 int alarmCloseMinsCheck = alarmCloseMins;
 //***************************************
 
@@ -128,7 +128,7 @@ void setup()
   WiFiManager wm;
   
   // wipes stored credentials for testing
-  //wm.resetSettings();
+  wm.resetSettings();
 
   bool res;
 
