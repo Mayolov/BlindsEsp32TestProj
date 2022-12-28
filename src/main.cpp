@@ -4,10 +4,13 @@
 #include <TimeAlarms.h>
 #include <NTPClient.h>
 #include <WiFiUDP.h>
+#include <ArduinoJson.h>
+#include <WebServer.h>
+#include <WiFiManager.h>
 
 // wifi credentials
-const char* ssid = "7LeavesCafe";
-const char* password = "berry129";
+// const char* ssid = "7LeavesCafe";
+// const char* password = "berry129";
 
 // soft webserver thing
 const char* ssidServer = "HASH-SLINGING-SLASHER";
@@ -31,7 +34,7 @@ const int dir2 = 26;
 int mSpeed = 255;
 
 // Set web server port number to 80
-WiFiServer server(80);
+WebServer  server(80);
 
 // Variable to store the HTTP request
 String header;
@@ -72,8 +75,6 @@ int interval_two = 3000;
 // Should be the closing way, but itll change if its not right when I test it 
 void motorClockWise(void)
 {
-  timeClient.update();
-
   time_since_last_reset = millis();
   Serial.println("\nALARM 1 TRIGGERED!\n");
 
@@ -122,22 +123,59 @@ void digitalClockDisplay(){
   Serial.println();
 }
 
+// void handleWiFiRequest(http_request_t *req) {
+//   StaticJsonDocument<200> doc;
+
+//   // Parse the request body
+//   DeserializationError error = deserializeJson(doc, req->body);
+//   if (error) {
+//     // There was an error parsing the request body
+//     return;
+//   }
+
+//   // Extract the WiFi credentials from the request body
+//   const char* ssid = doc["ssid"];
+//   const char* password = doc["password"];
+
+//   // Use the WiFi credentials to connect to the WiFi network
+//   WiFi.begin(ssid, password);
+// }
+
 void setup()
 {
-  Serial.begin(9600);
-  WiFi.begin(ssid, password); // Connect to WiFi
+  WiFi.mode(WIFI_STA);
 
+  Serial.begin(9600);
+
+  // local initialization
+  WiFiManager wm;
+  // WiFi.begin(ssid, password); // Connect to WiFi
+
+  // wipes stored credentials for testing
+  wm.resetSettings();
+
+  bool res;
+
+  res = wm.autoConnect("GYAT-DAMN","1234567890");
+
+  if(!res){
+    Serial.println("Failed to connect");
+    //ESP.restart();
+  }else{
+    // connected to wifi
+    Serial.print("Connected!!!!!!!!!!!!!!!!");
+  }
   // Motor pin modes
   pinMode(speedPin, OUTPUT);
   pinMode(dir1, OUTPUT);
   pinMode(dir2, OUTPUT);
 
   // Checks if connected to wifi
-  while (WiFi.status() != WL_CONNECTED)
-  { 
-    Alarm.delay(500);
-    Serial.print("."); 
-  }
+  // while (WiFi.status() != WL_CONNECTED)
+  // { 
+  //   Alarm.delay(500);
+  //   Serial.print("."); 
+  // }
 
 // Print local IP address and start web server 
 Serial.println(""); 
@@ -160,23 +198,53 @@ Serial.println(timeClient.getFormattedTime());
 setTime((newtime.substring(0,2)).toInt(),(newtime.substring(3,5)).toInt(),(newtime.substring(6,8)).toInt(),1,1,20);  // Initialize the output variables as outputs
 
 
-//************************************************************************************************
-//*****************************************Separation*********************************************
-//************************************************************************************************
-// Connect to Wi-Fi network with SSID and password
-Serial.print("Setting AP (Access Point)…");
-// Remove the password parameter, if you want the AP (Access Point) to be open
-WiFi.softAP(ssidServer, passwordServer); //HERECOM BACKAOMEWFNUBOGB#&*B#@*&OG#B*&GB#&GB@&*G#B#&G*BG@&*BG#
+// //************************************************************************************************
+// //*****************************************Separation*********************************************
+// //************************************************************************************************
+// // Connect to Wi-Fi network with SSID and password
+// Serial.print("Setting AP (Access Point)…");
+// // Remove the password parameter, if you want the AP (Access Point) to be open
+// // WiFi.softAP(ssidServer, passwordServer); //HERECOM BACKAOMEWFNUBOGB#&*B#@*&OG#B*&GB#&GB@&*G#B#&G*BG@&*BG#
 
-IPAddress IP = WiFi.softAPIP();
-Serial.print("AP IP address: ");
-Serial.println(IP);
+// // IPAddress IP = WiFi.softAPIP();
+// // Serial.print("AP IP address: ");
+// // Serial.println(IP);
   
-server.begin();
-//************************************************************************************************
-//*****************************************Separation*********************************************
-//************************************************************************************************
+// // server.begin();
+// //************************************************************************************************
+// //*****************************************Separation*********************************************
+// //************************************************************************************************
+// // Set up the server
+// server.on("/connect_to_wifi", HTTP_POST, []() {
+//   // Read the request body
+//   String requestBody = server.arg("plain");
 
+//   // Parse the request body as JSON
+//   DynamicJsonDocument doc(1024);
+//   DeserializationError error = deserializeJson(doc, requestBody);
+//   if (error) {
+//     // Return an error if the request body is invalid
+//     server.send(400, "application/json", "{\"error\":\"invalid request body\"}");
+//     return;
+//   }
+
+//   // Get the ssid and password from the request body
+//   const char* ssid = doc["ssid"];
+//   const char* password = doc["password"];
+
+//   // Use the ssid and password to connect to WiFi
+//   WiFi.begin(ssid, password);
+
+//   // Wait for the connection to be established
+//   while (WiFi.status() != WL_CONNECTED) {
+//     delay(500);
+//   }
+
+//   // Return a success message
+//   server.send(200, "application/json", "{\"status\":\"connected\"}");
+// });
+
+// server.begin(); // Start the server
 // alarm one goes clockwise
 // could be made into a function instead
   /*While alarm1Set != 'ok' or 'skip'{
@@ -203,42 +271,23 @@ void loop()
 //************************************************************************************************
 //*****************************************Separation*********************************************
 //************************************************************************************************
-  WiFiClient client = server.available();   // Listen for incoming clients
+  // WiFiClient client = server.available();   // Listen for incoming clients
 
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        header += c;
-        if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println("Connection: close");
-            client.println();
-
-          } else { // if you got a newline, then clear currentLine
-            currentLine = "";
-          }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
-      }
-    }
-  }
-  // Clear the header variable
-  header = "";
-  // Close the connection
-  client.stop();
-  Serial.println("Client disconnected.");
-  Serial.println("");
+  // if (client) {                             // If a new client connects,
+  //   Serial.println("New Client.");          // print a message out in the serial port
+  //   String currentLine = "";                // make a String to hold incoming data from the client
+  //   while (client.connected()) {            // loop while the client's connected
+  //     if (client.available()) {             // if there's bytes to read from the client,
+  //       char c = client.read();             // read a byte, then
+  //       Serial.write(c);                    // print it out the serial monitor
+  //       handleWiFiRequest();
+  //     }
+  //   }
+  // }
+  // // Clear the header variable
+  // header = "";
+  // // Close the connection
+  // client.stop();
 //************************************************************************************************
 //*****************************************Separation*********************************************
 //************************************************************************************************
