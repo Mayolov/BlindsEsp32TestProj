@@ -11,6 +11,11 @@
 
 WiFiClient RemoteClient;
 
+// Set web server port number to 80
+WiFiServer Server(80);
+
+// Variable to store the HTTP request
+String header;
 // Set timezone PST and the server we're using 
 #define NTP_OFFSET 16*60*60
 #define NTP_ADDRESS "us.pool.ntp.org"
@@ -27,12 +32,6 @@ const int speedPin = 14;
 const int dir1 = 27;
 const int dir2 = 26;
 int mSpeed = 255;
-
-// Set web server port number to 80
-WiFiServer Server(80);
-
-// Variable to store the HTTP request
-String header;
 
 /* These variable take integer values and are assigned to checking variables
    The though of this is when in the loop if a variable is changed a checker var
@@ -176,9 +175,6 @@ void setup()
 void loop()
 {
   timeClient.update();
-  // CheckForConnections();
-  // CheckForConnection(); // this is the second one
-  // Listen for incoming client connections
   
   WiFiClient client = Server.available();
   if (client) {
