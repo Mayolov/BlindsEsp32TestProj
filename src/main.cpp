@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <Wifi.h>
+#include <WiFi.h>
 #include <TimeLib.h>
 #include <TimeAlarms.h>
 #include <NTPClient.h>
@@ -7,14 +7,9 @@
 #include <ArduinoJson.h>
 #include <WebServer.h>
 #include <WiFiManager.h>
+#include <WebSocketsClient.h>
 
-// wifi credentials
-// const char* ssid = "7LeavesCafe";
-// const char* password = "**********";
-
-// soft webserver thing
-const char* ssidServer = "HASH-SLINGING-SLASHER";
-const char* passwordServer = NULL;
+WiFiClient RemoteClient;
 
 // Set timezone PST and the server we're using 
 #define NTP_OFFSET 16*60*60
@@ -25,7 +20,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP,NTP_ADDRESS, NTP_OFFSET);
 
 // The Blinds are open if true
-bool isOpen = true;
+String isOpen = "true";
 
 // Motor controls
 const int speedPin = 14;
@@ -34,18 +29,10 @@ const int dir2 = 26;
 int mSpeed = 255;
 
 // Set web server port number to 80
-WebServer  server(80);
+WiFiServer Server(80);
 
 // Variable to store the HTTP request
 String header;
-
-// Auxiliar variables to store the current output state
-String output25State = "off";
-String output33State = "off";
-
-// Wifi control stuff
-const int output25 = 25;
-const int output33 = 33;
 
 /* These variable take integer values and are assigned to checking variables
    The though of this is when in the loop if a variable is changed a checker var
@@ -123,23 +110,14 @@ void digitalClockDisplay(){
   Serial.println();
 }
 
-// void handleWiFiRequest(http_request_t *req) {
-//   StaticJsonDocument<200> doc;
-
-//   // Parse the request body
-//   DeserializationError error = deserializeJson(doc, req->body);
-//   if (error) {
-//     // There was an error parsing the request body
-//     return;
-//   }
-
-//   // Extract the WiFi credentials from the request body
-//   const char* ssid = doc["ssid"];
-//   const char* password = doc["password"];
-
-//   // Use the WiFi credentials to connect to the WiFi network
-//   WiFi.begin(ssid, password);
-// }
+String readRequest(WiFiClient client) {
+  // Read the incoming request into a string
+  String request = "";
+  while (client.available()) {
+    request += (char)client.read();
+  }
+  return request;
+}
 
 void setup()
 {
@@ -149,10 +127,9 @@ void setup()
 
   // local initialization
   WiFiManager wm;
-  // WiFi.begin(ssid, password); // Connect to WiFi
-
+  
   // wipes stored credentials for testing
-  wm.resetSettings();
+  //wm.resetSettings();
 
   bool res;
 
@@ -170,138 +147,68 @@ void setup()
   pinMode(dir1, OUTPUT);
   pinMode(dir2, OUTPUT);
 
-  // Checks if connected to wifi
-  // while (WiFi.status() != WL_CONNECTED)
-  // { 
-  //   Alarm.delay(500);
-  //   Serial.print("."); 
-  // }
+  // Print local IP address and start web server 
+  Serial.println(""); 
+  Serial.println("WiFi connected."); 
+  Serial.println("IP address: "); 
+  Serial.println(WiFi.localIP());
 
-// Print local IP address and start web server 
-Serial.println(""); 
-Serial.println("WiFi connected."); 
-Serial.println("IP address: "); 
-Serial.println(WiFi.localIP());
-
-// Serial prints time when setup is happening
-timeClient.update();
-String newtime = timeClient.getFormattedTime(); 
-Serial.print("the time is : "); 
-Serial.println(newtime); 
-Serial.print("Hour : "); 
-Serial.println((newtime.substring(0,2)).toInt()); 
-Serial.print("Minute : "); 
-Serial.println((newtime.substring(3,5)).toInt()); 
-Serial.print("Seconds : "); 
-Serial.println((newtime.substring(6,8)).toInt()); 
-Serial.println(timeClient.getFormattedTime());
-setTime((newtime.substring(0,2)).toInt(),(newtime.substring(3,5)).toInt(),(newtime.substring(6,8)).toInt(),1,1,20);  // Initialize the output variables as outputs
+  // Serial prints time when setup is happening
+  timeClient.update();
+  String newtime = timeClient.getFormattedTime(); 
+  Serial.print("the time is : "); 
+  Serial.println(newtime); 
+  Serial.print("Hour : "); 
+  Serial.println((newtime.substring(0,2)).toInt()); 
+  Serial.print("Minute : "); 
+  Serial.println((newtime.substring(3,5)).toInt()); 
+  Serial.print("Seconds : "); 
+  Serial.println((newtime.substring(6,8)).toInt()); 
+  Serial.println(timeClient.getFormattedTime());
+  setTime((newtime.substring(0,2)).toInt(),(newtime.substring(3,5)).toInt(),(newtime.substring(6,8)).toInt(),1,1,20);  // Initialize the output variables as outputs
 
 
-// //************************************************************************************************
-// //*****************************************Separation*********************************************
-// //************************************************************************************************
-// // Connect to Wi-Fi network with SSID and password
-// Serial.print("Setting AP (Access Point)…");
-// // Remove the password parameter, if you want the AP (Access Point) to be open
-// // WiFi.softAP(ssidServer, passwordServer); //HERECOM BACKAOMEWFNUBOGB#&*B#@*&OG#B*&GB#&GB@&*G#B#&G*BG@&*BG#
+  //wsClient.beginSSL(WS_HOST,WS_PORT,WS_URL,"","wss");
+  Server.begin(); // Start the server
 
-// // IPAddress IP = WiFi.softAPIP();
-// // Serial.print("AP IP address: ");
-// // Serial.println(IP);
-  
-// // server.begin();
-// //************************************************************************************************
-// //*****************************************Separation*********************************************
-// //************************************************************************************************
-// // Set up the server
-// server.on("/connect_to_wifi", HTTP_POST, []() {
-//   // Read the request body
-//   String requestBody = server.arg("plain");
-
-//   // Parse the request body as JSON
-//   DynamicJsonDocument doc(1024);
-//   DeserializationError error = deserializeJson(doc, requestBody);
-//   if (error) {
-//     // Return an error if the request body is invalid
-//     server.send(400, "application/json", "{\"error\":\"invalid request body\"}");
-//     return;
-//   }
-
-//   // Get the ssid and password from the request body
-//   const char* ssid = doc["ssid"];
-//   const char* password = doc["password"];
-
-//   // Use the ssid and password to connect to WiFi
-//   WiFi.begin(ssid, password);
-
-//   // Wait for the connection to be established
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(500);
-//   }
-
-//   // Return a success message
-//   server.send(200, "application/json", "{\"status\":\"connected\"}");
-// });
-
-// server.begin(); // Start the server
-// alarm one goes clockwise
-// could be made into a function instead
-  /*While alarm1Set != 'ok' or 'skip'{
-
-      get hour1:
-      get minute1:
-
-  }*/
-  
-// alarm two goes counterclockwise
-  /*While alarm2Set != 'ok' or 'skip'{
-
-      get hour2:
-      get minute2:
-
-  }*/
 }
 
 void loop()
 {
-
   timeClient.update();
+  // CheckForConnections();
+  // CheckForConnection(); // this is the second one
+  // Listen for incoming client connections
+  
+  WiFiClient client = Server.available();
+  if (client) {
+    // Read the incoming HTTP request
+    String request = readRequest(client);
 
-//************************************************************************************************
-//*****************************************Separation*********************************************
-//************************************************************************************************
-  // WiFiClient client = server.available();   // Listen for incoming clients
+    // // Parse the incoming request to determine the command
+    // String command = parseCommand(request);
 
-  // if (client) {                             // If a new client connects,
-  //   Serial.println("New Client.");          // print a message out in the serial port
-  //   String currentLine = "";                // make a String to hold incoming data from the client
-  //   while (client.connected()) {            // loop while the client's connected
-  //     if (client.available()) {             // if there's bytes to read from the client,
-  //       char c = client.read();             // read a byte, then
-  //       Serial.write(c);                    // print it out the serial monitor
-  //       handleWiFiRequest();
-  //     }
-  //   }
-  // }
-  // // Clear the header variable
-  // header = "";
-  // // Close the connection
-  // client.stop();
-//************************************************************************************************
-//*****************************************Separation*********************************************
-//************************************************************************************************
+    // // Extract the data from the request
+    // int data = parseData(request);
+
+    // // Perform the appropriate action based on the command
+    // executeCommand(command, data);
+
+    // // Send a response back to the client
+    // sendResponse(client);
+    Serial.print(request);
+  }
   Serial.print("Waiting for alarms\n ");
   // If the updated times on the non-Check vars are changed then go and changed their alarm
-  if(hour() == alarmOpenHoursCheck && minute() == alarmOpenMinsCheck && isOpen == true){
+  if(hour() == alarmOpenHoursCheck && minute() == alarmOpenMinsCheck && isOpen == "true"){
     motorClockWise();
     //set isOpen to false/ true depending on how this operates
-    isOpen = false;
+    isOpen = "false";
   }
-    if(hour() == alarmCloseHoursCheck && minute() == alarmCloseMinsCheck && isOpen == false){
+    if(hour() == alarmCloseHoursCheck && minute() == alarmCloseMinsCheck && isOpen == "false"){
     motorCounterClockWise();
     //set isOpen to false/ true depending on how this operates
-    isOpen = true;
+    isOpen = "true";
   }
 
   if(alarmOpenHoursCheck!= alarmOpenHours && alarmOpenMinsCheck != alarmOpenMins){
@@ -313,15 +220,13 @@ void loop()
     alarmCloseHoursCheck = alarmCloseHours;
   }
 
-
-
   // displays the time in minutes
   digitalClockDisplay();
 
-  Alarm.delay(20000);
+  Alarm.delay(2000);
 
   // Psuedo code for the open or close on the app
-  /* if sense close button && isOpen ==True{
+  /* if sense close button && isOpen == True{
       close using function
       isOpen == false;
   }
@@ -333,18 +238,4 @@ void loop()
     isOPen == true
   }
   */
-
-  // do this command if the time alarm time is equal to this and if the blinds are closed
-  //if (ClockObj.isAlarm1() && isOpen == false){
-  //motorClockWise();
-
-  //isOpen = true;
-  //}
-
-  // do this command if the time alarm time is equal to this and if the blinds are open
-  //if (ClockObj.isAlarm2() && isOpen == true){
-  //motorCounterClockWise();
-  //isOpen = false;
-  //}
-
 }
