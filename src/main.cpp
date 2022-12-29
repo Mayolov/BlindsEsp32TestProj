@@ -64,7 +64,7 @@ int interval_two = 3000;
 void motorClockWise(void)
 {
   Serial.println("\nALARM 1 TRIGGERED!\n");
-  
+
   if(isOpen == true){
   time_since_last_reset = millis();
 
@@ -211,8 +211,8 @@ void parseAndExecute(std::string command){
       fMin = strTime.substr(pos + 1);
     }
 
-    alarmOpenHours = std::stoi(fHour);
-    alarmOpenMins = std::stoi(fMin);
+    alarmCloseHours = std::stoi(fHour);
+    alarmCloseMins = std::stoi(fMin);
     Serial.print("The time showing: ");
     Serial.println(strTime.c_str());
     //std::string strTime = command.substr(L,R);
@@ -316,10 +316,13 @@ void loop()
     motorClockWise();
     //set isOpen to false/ true depending on how this operates
   }
-    if(hour() == alarmCloseHoursCheck && minute() == alarmCloseMinsCheck){
+  if(hour() == alarmCloseHoursCheck && minute() == alarmCloseMinsCheck){
     motorCounterClockWise();
     //set isOpen to false/ true depending on how this operates
   }
+  Serial.print(alarmCloseHoursCheck);
+  Serial.print(":");
+  Serial.println(alarmCloseMinsCheck);
 
   if(alarmOpenHoursCheck!= alarmOpenHours && alarmOpenMinsCheck != alarmOpenMins){
     alarmOpenMinsCheck = alarmOpenMins;
@@ -332,12 +335,9 @@ void loop()
 
   // displays the time in minutes
   digitalClockDisplay();
+  Serial.println("_________________________");
+  Serial.println(isOpen);
+  Serial.println("_________________________");
 
   Alarm.delay(2000);
-  /*
-  if sense open button && isOpen ==False{
-    open using function
-    isOPen == true
-  }
-  */
 }
